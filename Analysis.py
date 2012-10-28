@@ -7,6 +7,19 @@
 #-----------------------------------------------------------------------------
 #imports
 
-
+import matplotlib
 import pylab
-import math
+import csv
+from decimal import Decimal
+counts = []
+time = []
+
+with open('testdata.csv', 'r') as data:
+    for item in csv.DictReader(data, fieldnames=("time", "counts")):
+        counts.append(float(item["counts"]))
+        time.append(Decimal(item["time"]))
+
+matplotlib.pyplot.scatter(time, counts)
+pylab.xlabel("time")
+pylab.ylabel("counts")
+pylab.show()
