@@ -6,34 +6,27 @@ from numpy import *
 import lomb
 import math
 from operator import itemgetter
-from bintrees import FastBinaryTree as Tree
+#from bintrees import FastBinaryTree as Tree
 from six.moves import filter, zip
 
-TEST_FILES = {
-    "light_curves": "log_IGRJ18027-2016_17-30.dat",
-    "noise": "log_GX13+1_30-60.dat"
+DATA_FILES = {
+    "IGR_J18027-2016_17-30": "log_IGRJ18027-2016_17-30.dat",
+    "GX13+1_30-60": "log_GX13+1_30-60.dat"
 }
 
 
 def quadrature(rows, key="flux_error"):
     errors = [row[key] for row in rows]
-    sqerrs = zeros(len(errors))
-    for i in range(len(errors)):
-        sqerrs[i] = errors[i]**2
+    sqerrs = map(lambda x: x ** 2, errors)
     return math.sqrt(math.fsum(sqerrs))
 
 
 def weighted_av(x, delta_x):
-    w = zeros(len(delta_x))
-    for i in range(len(delta_x)):
-        w[i] = 1 / ((delta_x[i]) ** 2)
-    sum_w = math.fsum(w)
-    xw = zeros(len(x))
-    for i in range(len(x)):
-        xw[i] = x[i] * w[i]
+    weights = map(lambda x: 1 / (x ** 2), delta_x)
+    xw = map(lambda x, w: x * w, x, weights)
+    sum_weights = math.fsum(weights)
     sum_xw = math.fsum(xw)
-    wav = (sum_xw / sum_w)
-    return wav
+    return (sum_xw / sum_weights)
 
 
 def weighted_average(rows, keys=("flux", "flux_error")):
@@ -57,11 +50,9 @@ def import_data(file_name):
     })
 
 
-def rebin(rows, bin_size=1):
-    key_function = lambda row: (row["MJD"] // bin_size) * bin_size
-    for bin_key, bin in itertools.groupby(rows, key_function):
+def rebin(rows, bin_size=20):
+    for bin_key, bin in itertools.groupby(rows, lambda row: (row["MJD"] // bin_size) * bin_size):
         rows = tuple(bin)
-
         yield (bin_key, weighted_average(rows), quadrature(rows))
 
 
@@ -87,12 +78,12 @@ def periodogram(data):
 
     print period_max
 
-    # pylab.vlines(period, 0, array(power), color='k', linestyles='solid')
-    # pylab.xlabel("period, days")
-    # pylab.ylabel("power")
-    # pylab.xlim([0, 40])
-    # pylab.title('IGRJ18027 2016_17-30 KeV Periodogram ')
-    # pylab.show()
+    pylab.vlines(period, 0, array(power), color='k', linestyles='solid')
+    pylab.xlabel("period, days")
+    pylab.ylabel("power")
+    pylab.xlim([0, 40])
+    pylab.title('IGRJ18027 2016_17-30 KeV Periodogram ')
+    pylab.show()
 
     return period_max
 
@@ -103,7 +94,7 @@ def plot_rebin(data):
     pylab.errorbar(x, y, yerr=errors, fmt=".")
     pylab.xlabel("time")
     pylab.ylabel("counts")
-    pylab.title('Rebin Lightcurve')
+    pylab.title('IGRJ18027 2016 17-30 KeV 1 Month Lightcurve')
     pylab.show()
 
 
@@ -112,7 +103,7 @@ def fold(rows, period, number_bins=10):
         row["MJD"] %= period
     rows.sort(key=itemgetter("MJD"))
 
-    MJD_bins = {k: list() for k in linspace(0, period_max, number_bins)[:-1]} # dropping the last element
+    MJD_bins = {k: list() for k in linspace(0, period_max, number_bins)[:-1]}  # dropping the last element
 
     for row in rows:
         # discover the biggest key that is smaller than row["MJD"]
@@ -137,13 +128,12 @@ def fold(rows, period, number_bins=10):
     #pylab.errorbar(list(x), list(y), list(errors), fmt='.')
     pylab.xlabel("time")
     pylab.ylabel("counts")
-    pylab.title('Folded')
+    pylab.title('IGRJ18027 2016 17-30 KeV Folded Lightcurve')
     pylab.show()
-
 
     # Use tree to drop into bins:
     # MJD_bins = Tree({k : list() for k in linspace(0, period_max, number_bins)})
-    
+
     # for row in rows:
     #     key, bin = MJD_bins.prev_item(row["MJD"])
     #     bin.append(row)
@@ -153,11 +143,10 @@ def fold(rows, period, number_bins=10):
 if __name__ == "__main__":
     data = list(filter(
         lambda row: (row["OAA"] < 12) and (row["exposure"] > 500),
-        import_data(TEST_FILES["light_curves"])
+        import_data(DATA_FILES["IGR_J18027-2016_17-30"])
     ))
 
+    #rebin(data)
     plot_rebin(data)
-
-    period_max = periodogram(data)
-
-    fold(data, period_max)
+    # period_max = periodogram(data)
+    # fold(data, period_max)
