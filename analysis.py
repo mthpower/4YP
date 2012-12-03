@@ -69,6 +69,19 @@ def rebin(rows, bin_size=30):
         yield (bin_key, flux, error)
 
 
+def plot_rebin(data):
+    x, y, errors = zip(*rebin(data))
+    x_shift = zeros(len(x))
+    for i in range(len(x)):
+        x_shift[i] = x[i] - x[0]
+    pylab.errorbar(x_shift, y, yerr=errors, fmt=".")
+    pylab.ylim([-20,20])
+    pylab.xlabel("time")
+    pylab.ylabel("counts")
+    pylab.title('IGRJ18027 2016 17-30 KeV 1 Month Lightcurve')
+    pylab.show()
+
+
 def lombscargle(rows, oversample=6., nyquist=10, keys=("MJD", "flux")):
     x = []
     y = []
@@ -81,7 +94,7 @@ def lombscargle(rows, oversample=6., nyquist=10, keys=("MJD", "flux")):
     return (zip(fx, fy), jmax)
 
 
-def periodogram(data):
+def periodogram(data, plot=False):
     data, jmax = lombscargle(data)
 
     # calculate the reciprocal of the x dimension
@@ -91,27 +104,15 @@ def periodogram(data):
 
     print period_max
 
-    pylab.vlines(period, 0, array(power), color='k', linestyles='solid')
-    pylab.xlabel("period, days")
-    pylab.ylabel("power")
-    pylab.xlim([0, 40])
-    pylab.title('IGRJ18027 2016_17-30 KeV Periodogram ')
-    pylab.show()
+    if plot == True:
+        pylab.vlines(period, 0, array(power), color='k', linestyles='solid')
+        pylab.xlabel("period, days")
+        pylab.ylabel("power")
+        pylab.xlim([0, 40])
+        pylab.title('IGRJ18027 2016_17-30 KeV Periodogram ')
+        pylab.show()
 
     return period_max
-
-
-def plot_rebin(data):
-    x, y, errors = zip(*rebin(data, 20))
-    x_shift = zeros(len(x))
-    for i in range(len(x)):
-        x_shift[i] = x[i] - x[0]
-    pylab.errorbar(x_shift, y, yerr=errors, fmt=".")
-    pylab.ylim([-20,20])
-    pylab.xlabel("time")
-    pylab.ylabel("counts")
-    pylab.title('IGRJ18027 2016 17-30 KeV 1 Month Lightcurve')
-    pylab.show()
 
 
 def fold(rows, period, number_bins=10):
@@ -130,30 +131,24 @@ def fold(rows, period, number_bins=10):
 
         MJD_bins[biggest_key].append(row)
 
-    def weight_and_quad():
-        # weighted average of fluxes in bins
-        for key, value in MJD_bins.items():
-            if value:
-                yield (key, weighted_average(value), quadrature(value))
+    # weighted average of fluxes in bins
+    for key, value in MJD_bins.items():
+        if value:
+            flux, error = rebin_error(value)
+            yield (key, flux, error)
 
-    x, y, errors = zip(*weight_and_quad())
+def plot_fold(data, period_max):
+    #crap = list(fold(data, period_max))
+    x, y, errors = zip(*fold(data, period_max, 30))
     x = itertools.chain.from_iterable([x, map(lambda x: x + period_max, x)])
     y = itertools.chain.from_iterable([y, y])
-    #errors = itertools.chain.from_iterable([errors, errors])
-    pylab.plot(list(x), list(y), '.')
-    #pylab.errorbar(list(x), list(y), list(errors), fmt='.')
+    errors = itertools.chain.from_iterable([errors, errors])
+    #pylab.plot(list(x), list(y), '.')
+    pylab.errorbar(list(x), list(y), list(errors), fmt='.')
     pylab.xlabel("time")
     pylab.ylabel("counts")
     pylab.title('IGRJ18027 2016 17-30 KeV Folded Lightcurve')
     pylab.show()
-
-    # Use tree to drop into bins:
-    # MJD_bins = Tree({k : list() for k in linspace(0, period_max, number_bins)})
-
-    # for row in rows:
-    #     key, bin = MJD_bins.prev_item(row["MJD"])
-    #     bin.append(row)
-    return MJD_bins
 
 
 if __name__ == "__main__":
@@ -162,7 +157,6 @@ if __name__ == "__main__":
         import_data(DATA_FILES["IGR_J18027-2016_17-30"])
     ))
 
-    #print list(rebin(data))
     plot_rebin(data)
-    # period_max = periodogram(data)
-    # fold(data, period_max)
+    period_max = periodogram(data)
+    plot_fold(data, period_max)
