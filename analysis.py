@@ -15,27 +15,39 @@ DATA_FILES = {
 }
 
 
-def quadrature(rows, key="flux_error"):
-    errors = [row[key] for row in rows]
-    sqerrs = map(lambda x: x ** 2, errors)
+def quadrature(dx):
+    sqerrs = map(lambda dx: dx ** 2, dx)
     return math.sqrt(math.fsum(sqerrs))
 
 
-def weighted_av(x, delta_x):
-    weights = map(lambda x: 1 / (x ** 2), delta_x)
+def fractional(x, dx):
+    sqfracerrs = map(lambda x, dx: (dx / x) ** 2, x, dx)
+    mult = reduce(lambda a, b: a * b, x)
+    return mult * math.sqrt(math.fsum(sqfracerrs))
+
+
+def weighted_av(x, dx):
+    weights = map(lambda x: 1 / (x ** 2), dx)
     xw = map(lambda x, w: x * w, x, weights)
-    sum_weights = math.fsum(weights)
-    sum_xw = math.fsum(xw)
-    return (sum_xw / sum_weights)
+    return math.fsum(xw) / math.fsum(weights)
 
 
-def weighted_average(rows, keys=("flux", "flux_error")):
-    errors = []
-    fluxes = []
+def weighted_av_error(x, dx):
+    def fractxy(x, dx, y):
+        return y * (math.sqrt((dx / x) ** 2))
+    w = map(lambda x: 1 / (x ** 2), dx)
+    q = map(lambda x, w: x * w, x, w)
+    dq = map(fractxy, x, dx, q)
+    return fractxy(math.fsum(q), quadrature(dq), weighted_av(x, dx))
+
+
+def rebin_error(rows, keys=("flux", "flux_error")):
+    flux = []
+    error = []
     for row in rows:
-        errors.append(row[keys[1]])
-        fluxes.append(row[keys[0]])
-    return weighted_av(errors, fluxes)
+        flux.append(row[keys[0]])
+        error.append(row[keys[1]])
+    return weighted_av(flux, error), weighted_av_error(flux, error)
 
 
 def import_data(file_name):
@@ -50,10 +62,11 @@ def import_data(file_name):
     })
 
 
-def rebin(rows, bin_size=20):
+def rebin(rows, bin_size=30):
     for bin_key, bin in itertools.groupby(rows, lambda row: (row["MJD"] // bin_size) * bin_size):
         rows = tuple(bin)
-        yield (bin_key, weighted_average(rows), quadrature(rows))
+        flux, error = rebin_error(rows)
+        yield (bin_key, flux, error)
 
 
 def lombscargle(rows, oversample=6., nyquist=10, keys=("MJD", "flux")):
@@ -89,9 +102,12 @@ def periodogram(data):
 
 
 def plot_rebin(data):
-    x, y, errors = zip(*rebin(data))
-
-    pylab.errorbar(x, y, yerr=errors, fmt=".")
+    x, y, errors = zip(*rebin(data, 20))
+    x_shift = zeros(len(x))
+    for i in range(len(x)):
+        x_shift[i] = x[i] - x[0]
+    pylab.errorbar(x_shift, y, yerr=errors, fmt=".")
+    pylab.ylim([-20,20])
     pylab.xlabel("time")
     pylab.ylabel("counts")
     pylab.title('IGRJ18027 2016 17-30 KeV 1 Month Lightcurve')
@@ -146,7 +162,7 @@ if __name__ == "__main__":
         import_data(DATA_FILES["IGR_J18027-2016_17-30"])
     ))
 
-    #rebin(data)
+    #print list(rebin(data))
     plot_rebin(data)
     # period_max = periodogram(data)
     # fold(data, period_max)
