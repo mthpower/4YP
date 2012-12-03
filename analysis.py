@@ -5,7 +5,7 @@ import pylab
 from numpy import *
 import lomb
 import math
-from operator import itemgetter
+from operator import itemgetter, mul
 #from bintrees import FastBinaryTree as Tree
 from six.moves import filter, zip
 
@@ -22,7 +22,7 @@ def quadrature(dx):
 
 def fractional(x, dx):
     sqfracerrs = map(lambda x, dx: (dx / x) ** 2, x, dx)
-    mult = reduce(lambda a, b: a * b, x)
+    mult = reduce(mul, x)
     return mult * math.sqrt(math.fsum(sqfracerrs))
 
 
