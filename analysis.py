@@ -216,26 +216,26 @@ def bootstrap(rows):
 #     return period
 
 
-def multi_lomb(data, iterations=1000):
+def multi_lomb(data, iterations=500):
     p = Pool(4)
     periods = []
     mod_data = []
-    
+
     for i in range(iterations):
         print i
         mod_data.append(list(montecarlo(data)))
-
 
     for item in p.imap(periodogram, mod_data):
         periods.append(item)
 
     return periods
 
+
 def histogram(periods, bins=20):
     hist, bins = pylab.histogram(periods, bins)
-    width = 0.7*(bins[1]-bins[0])
-    center = (bins[:-1]+bins[1:])/2
-    pylab.bar(center, hist, align = 'center', width = width)
+    width = 0.7 * (bins[1] - bins[0])
+    center = (bins[: -1] + bins[1:]) / 2
+    pylab.bar(center, hist, align='center', width=width)
     pylab.show()
 
 
@@ -245,7 +245,7 @@ if __name__ == "__main__":
     #data_high = filter_data(data_file="IGR J18027-2016 30-60")
     #data = ["a","b","c","d","e","f"]
 
-    histogram(multi_lomb(data, iterations=10))
+    histogram(multi_lomb(data))
 
     #plot_rebin(data)
     #period_max = periodogram(data)
