@@ -14,23 +14,28 @@ from multiprocessing import Pool
 DATA_FILES = {
     "IGR J18027-2016 17-30": "log_IGRJ18027-2016_17-30.dat",
     "IGR J18027-2016 30-60": "log_IGRJ18027-2016_30-60.dat",
-    "GX13+1_30-60": "log_GX13+1_30-60.dat"
+    "GX13+1_30-60": "log_GX13+1_30-60.dat",
+    "1A0535+262 18-60": "log_1A0535+262_18-60.dat",
+    "AXJ1910.7+0917 18-60": "log_AXJ1910.7+0917_18-60.dat",
+    "AXJ1910.7+0917 100-300": "log_AXJ1910.7+0917_100-300.dat",
+    "CenX-3 18-60": "log_CenX-3_18-60.dat",
+    "EXO2030+375 18-60": "log_EXO2030+375_18-60.dat",
+    "IGRJ08408-4503 18-60": "log_IGRJ08408-4503_18-60.dat",
+    "SMCX-1 18-60": "log_SMCX-1_18-60.dat",
+    "OAO1657-415 18-60": "log_OAO1657-415_18-60.dat",
+    "IGR J11215-5952 18-60": "log_IGRJ11215-5952_18-60.dat",
+    "IGR J16418-4532 18-60": "log_IGRJ16418-4532_18-60.dat",
+    "IGR J16465-4507 18-60": "log_IGRJ16465-4507_18-60.dat",
+    "IGR J16479-4514 18-60": "log_IGRJ16479-4514_18-60.dat",
+    "IGR J17391-3021 18-60": "log_IGRJ17391-3021_18-60.dat",
+    "IGR J17407-2808 18-60": "log_IGRJ17407-2808_18-60.dat",
+    "IGR J17544-2619 18-60": "log_IGRJ17544-2619_18-60.dat",
+    "IGR J18219-1347 18-60": "log_IGRJ18219-1347_18-60.dat",
+    "IGR J18410-0535 18-60": "log_IGRJ18410-0535_18-60.dat",
+    "IGR J18450-0435 18-60": "log_IGRJ18450-0435_18-60.dat",
+    "IGR J18483-0311 18-60": "log_IGRJ18483-0311_18-60.dat",
+    "VelaX-1 18-60": "log_VelaX-1_18-60.dat"
 }
-
-
-# OBJECTS = (
-#     {
-#         "title": "J18027-2016",
-#         "ranges": (
-#             {
-#                 "bands": "30-60",
-#                 "file_name": "log_IGRJ18027-2016_17-30.dat"
-#             }
-#         # ...
-#         )
-#     }
-#     # ...
-# )
 
 
 def quadrature(dx):
@@ -57,6 +62,7 @@ def weighted_av_error(x, dx):
     q = map(lambda x, w: x * w, x, w)
     dq = map(fractxy, x, dx, q)
     return fractxy(math.fsum(q), quadrature(dq), weighted_av(x, dx))
+
 
 def import_data(file_name):
     """
@@ -95,17 +101,17 @@ def rebin_error(rows, keys=("flux", "flux_error")):
 
 def plot_rebin(data):
     x, y, errors = zip(*rebin(data))
-    x_shift = zeros(len(x))
+    x_shift = empty(len(x))
     for i in range(len(x)):
         x_shift[i] = x[i] - x[0]
     pylab.errorbar(x_shift, y, yerr=errors, fmt=".")
-    pylab.xlabel("time")
-    pylab.ylabel("counts")
-    pylab.title("IGRJ18027 2016 17-30 KeV 1 Month Lightcurve")
+    pylab.xlabel("time, days")
+    pylab.ylabel("counts/s")
+    pylab.title("VelaX-1 18-60 KeV 20 days binned Lightcurve")
     pylab.show()
 
 
-def lombscargle(rows, oversample=6., nyquist=10, keys=("MJD", "flux")):
+def lombscargle(rows, oversample=8., nyquist=10, keys=("MJD", "flux")):
     x = []
     y = []
     for row in rows:
@@ -131,8 +137,8 @@ def periodogram(data, plot=False):
         pylab.vlines(period, 0, array(power), color='k', linestyles='solid')
         pylab.xlabel("period, days")
         pylab.ylabel("power")
-        pylab.xlim([0, 40])
-        pylab.title("IGRJ18027 2016_17-30 KeV Periodogram")
+        pylab.xlim([0, 250])
+        pylab.title("VelaX-1 18-60 KeV Periodogram")
         pylab.show()
 
     return period_max
@@ -168,9 +174,9 @@ def plot_fold(data, period_max):
     y = itertools.chain.from_iterable([y, y])
     errors = itertools.chain.from_iterable([errors, errors])
     pylab.errorbar(list(x), list(y), yerr=list(errors), fmt=".")
-    pylab.xlabel("time")
-    pylab.ylabel("counts")
-    pylab.title("IGRJ18027 2016 17-30 KeV Folded Lightcurve")
+    pylab.xlabel("time, days")
+    pylab.ylabel("counts/s")
+    pylab.title("VelaX-1 18-60 KeV Folded Lightcurve")
     pylab.show()
     return list(x), list(y), list(errors)
 
@@ -189,7 +195,7 @@ def hratio_plot(high, low):
     pylab.plot(x, y)
     pylab.xlabel("time")
     pylab.ylabel("hardness ratio")
-    pylab.title("IGRJ18027 2016 17-30 KeV Folded Lightcurve")
+    pylab.title("VelaX-1 18-60 KeV Folded Lightcurve")
     pylab.show()
 
 
@@ -210,11 +216,6 @@ def bootstrap(rows):
             "flux": row["flux"],
             "MJD": row["MJD"]
         }
-
-
-# def lombscargle_multi(data):
-#     period = periodogram(montecarlo(data))
-#     return period
 
 
 def multi_lomb(data, iterations=500):
@@ -241,14 +242,14 @@ def histogram(periods, bins=20):
 
 
 if __name__ == "__main__":
-    data = filter_data(data_file="IGR J18027-2016 17-30")
+    data = filter_data(data_file="VelaX-1 18-60")
     #data_low = filter_data(data_file="IGR J18027-2016 17-30")
     #data_high = filter_data(data_file="IGR J18027-2016 30-60")
     #data = ["a","b","c","d","e","f"]
 
-    histogram(multi_lomb(data))
+    #histogram(multi_lomb(data, iterations=10))
 
-    #plot_rebin(data)
-    #period_max = periodogram(data)
-    #plot_fold(data, period_max)
+    plot_rebin(data)
+    period_max = periodogram(data, plot=True)
+    plot_fold(data, period_max)
     #hratio_plot(list(rebin(data_high)), list(rebin(data_low)))
