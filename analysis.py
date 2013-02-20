@@ -149,7 +149,7 @@ def fold(rows, period, number_bins=10):
         row["MJD"] %= period
     rows.sort(key=itemgetter("MJD"))
 
-    MJD_bins = {k: list() for k in linspace(0, period, number_bins)[:-1]}  # dropping the last element
+    MJD_bins = {k:[] for k in linspace(0, period, number_bins)[:-1]}  # dropping the last element
 
     for row in rows:
         # discover the biggest key that is smaller than row["MJD"]
