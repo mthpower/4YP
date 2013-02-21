@@ -6,10 +6,11 @@ from numpy import *
 import lomb
 import math
 from operator import itemgetter, mul
-#from bintrees import FastBinaryTree as Tree
+from bintrees import FastBinaryTree as Tree
 from six.moves import filter, zip
 import random
 from multiprocessing import Pool
+from collections import defaultdict
 
 DATA_FILES = {
     "IGR J18027-2016 17-30": "log_IGRJ18027-2016_17-30.dat",
@@ -145,26 +146,23 @@ def periodogram(data, plot=False):
 
 
 def fold(rows, period, number_bins=10):
+    row_tree = Tree()
     for row in rows:
         row["MJD"] %= period
-    rows.sort(key=itemgetter("MJD"))
+        lst = row_tree.get(row["MJD"], [])
+        lst.append(row)
+        row_tree[row["MJD"]] = lst
+    #rows.sort(key=itemgetter("MJD"))
 
-    MJD_bins = {k:[] for k in linspace(0, period, number_bins)[:-1]}  # dropping the last element
+    bins = linspace(0, period, number_bins)
 
-    for row in rows:
-        # discover the biggest key that is smaller than row["MJD"]
-        biggest_key = -1
-        for key in MJD_bins.keys():
-            if (key > biggest_key) and (key <= row["MJD"]):
-                biggest_key = key
-
-        MJD_bins[biggest_key].append(row)
-
-    # weighted average of fluxes in bins
-    for key, value in MJD_bins.items():
+    for i in range(len(bins) - 1):
+        v = bins[i]
+        biggest = bins[i + 1]
+        value = itertools.chain.from_iterable(row_tree[v:biggest].values())
         if value:
             flux, error = rebin_error(value)
-            yield (key, flux, error)
+            yield (v, flux, error)
 
 
 def plot_fold(data, period_max):
