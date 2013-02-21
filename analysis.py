@@ -154,7 +154,7 @@ def fold(rows, period, number_bins=10):
         row_tree[row["MJD"]] = lst
     #rows.sort(key=itemgetter("MJD"))
 
-    bins = linspace(0, period, number_bins)
+    bins = linspace(0, period, number_bins + 1)
 
     for i in range(len(bins) - 1):
         v = bins[i]
