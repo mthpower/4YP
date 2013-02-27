@@ -5,12 +5,11 @@ import pylab
 from numpy import *
 import lomb
 import math
-from operator import itemgetter, mul
+from operator import itemgetter, mul, add, sub
 from bintrees import FastBinaryTree as Tree
 from six.moves import filter, zip
 import random
 from multiprocessing import Pool
-from collections import defaultdict
 
 DATA_FILES = {
     "IGR J18027-2016 17-30": "log_IGRJ18027-2016_17-30.dat",
@@ -60,7 +59,7 @@ def weighted_av_error(x, dx):
     def fractxy(x, dx, y):
         return y * (math.sqrt((dx / x) ** 2))
     w = map(lambda x: 1 / (x ** 2), dx)
-    q = map(lambda x, w: x * w, x, w)
+    q = map(mul, x, w)
     dq = map(fractxy, x, dx, q)
     return fractxy(math.fsum(q), quadrature(dq), weighted_av(x, dx))
 
@@ -85,6 +84,7 @@ def filter_data(data_file):
 
 
 def rebin(rows, bin_size=20):
+    """Rows must be sorted by MJD"""
     for bin_key, bin in itertools.groupby(rows, lambda row: (row["MJD"] // bin_size) * bin_size):
         rows = tuple(bin)
         flux, error = rebin_error(rows)
@@ -145,7 +145,7 @@ def periodogram(data, plot=False):
     return period_max
 
 
-def fold(rows, period, number_bins=10):
+def fold(rows, period, number_bins=20, flatten=True):
     row_tree = Tree()
     for row in rows:
         row["MJD"] %= period
@@ -156,13 +156,17 @@ def fold(rows, period, number_bins=10):
 
     bins = linspace(0, period, number_bins + 1)
 
+    print period
     for i in range(len(bins) - 1):
         v = bins[i]
         biggest = bins[i + 1]
         value = itertools.chain.from_iterable(row_tree[v:biggest].values())
         if value:
-            flux, error = rebin_error(value)
-            yield (v, flux, error)
+            if flatten == False:
+                yield (v, bin_fluxes(value))
+            else:
+                flux, error = rebin_error(value)
+                yield (v, flux, error)
 
 
 def plot_fold(data, period_max):
@@ -171,12 +175,60 @@ def plot_fold(data, period_max):
     x = itertools.chain.from_iterable([x, map(lambda x: x + period_max, x)])
     y = itertools.chain.from_iterable([y, y])
     errors = itertools.chain.from_iterable([errors, errors])
-    pylab.errorbar(list(x), list(y), yerr=list(errors), fmt=".")
+    pylab.errorbar(list(x), list(y), yerr=list(errors))
+    #pylab.errorbar(list(x), list(y), yerr=list(errors), fmt=".")
     pylab.xlabel("time, days")
     pylab.ylabel("counts/s")
     pylab.title("VelaX-1 18-60 KeV Folded Lightcurve")
     pylab.show()
     return list(x), list(y), list(errors)
+
+
+def pdm(rows, sample, min_period, max_period):
+    fluxes = empty(len(rows))
+    for i in range(len(rows)):
+        fluxes[i] = rows[i][1]
+    sigma = fluxes.var()
+
+    test_periods = arange(min_period, max_period, sample)
+
+    s = []
+    for period in test_periods:
+        folded = list(fold(rows, period, flatten=False))
+        
+        M = len(folded)
+        var = []
+        n = []
+        for row in folded:
+            var.append(array(row[1]).var())
+            n.append(len(row[1]))
+
+        s.append(s_variance(var, n, M))
+
+    for i in range(len(s)):
+        s[i] = s[i] / sigma
+
+    pylab.plot(test_periods, s)
+    pylab.xlabel("period, days")
+    pylab.ylabel("dispersion")
+    pylab.title("VelaX-1 18-60 KeV Phase Dispersion")
+    pylab.show()
+
+
+def bin_fluxes(rows):
+    fluxes=[]
+    for row in rows:
+        fluxes.append(row["flux"])
+    return fluxes
+
+
+def s_variance(var, n, M):
+    A = map(lambda var, n: (n - 1) * var, var, n)
+    return math.fsum(A) / (math.fsum(n) - M)
+
+
+def plot_pdm():
+    pass
 
 
 def hratio(high, low):
@@ -222,7 +274,6 @@ def multi_lomb(data, iterations=500):
     mod_data = []
 
     for i in range(iterations):
-        print i
         mod_data.append(list(montecarlo(data)))
 
     for item in p.imap(periodogram, mod_data):
@@ -247,7 +298,8 @@ if __name__ == "__main__":
 
     #histogram(multi_lomb(data, iterations=10))
 
-    plot_rebin(data)
-    period_max = periodogram(data, plot=True)
-    plot_fold(data, period_max)
+    #plot_rebin(data)
+    #period_max = periodogram(data)
+    #plot_fold(data, period_max)
+    pdm(data, 19.50, 0.05, 20.0)
     #hratio_plot(list(rebin(data_high)), list(rebin(data_low)))
