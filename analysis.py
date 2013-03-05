@@ -132,13 +132,13 @@ def periodogram(data, plot=False):
     period, power = zip(*data)
     period_max = data[jmax][0]
 
-    print "period =", period_max
+    print "period =", period_max, "days"
 
     if plot == True:
         pylab.vlines(period, 0, array(power), color='k', linestyles='solid')
         pylab.xlabel("period, days")
         pylab.ylabel("power")
-        pylab.xlim([0, 250])
+        pylab.xlim([0, 20])
         pylab.title("VelaX-1 18-60 KeV Periodogram")
         pylab.show()
 
@@ -147,6 +147,7 @@ def periodogram(data, plot=False):
 
 def fold(rows, period, number_bins=20, flatten=True):
     row_tree = Tree()
+    print "folding on:", period, "days"
     for row in rows:
         row["MJD"] %= period
         lst = row_tree.get(row["MJD"], [])
@@ -155,8 +156,6 @@ def fold(rows, period, number_bins=20, flatten=True):
     #rows.sort(key=itemgetter("MJD"))
 
     bins = linspace(0, period, number_bins + 1)
-
-    print period
     for i in range(len(bins) - 1):
         v = bins[i]
         biggest = bins[i + 1]
@@ -184,35 +183,36 @@ def plot_fold(data, period_max):
     return list(x), list(y), list(errors)
 
 
-def pdm(rows, sample, min_period, max_period):
-    fluxes = empty(len(rows))
-    for i in range(len(rows)):
-        fluxes[i] = rows[i][1]
-    sigma = fluxes.var()
+def pdm(rows, min_period, max_period, sample):
+    lc_fluxes = []
+    for row in rows:
+        lc_fluxes.append(row["flux"])
+    sigma = array(lc_fluxes).var()
 
     test_periods = arange(min_period, max_period, sample)
 
     s = []
     for period in test_periods:
-        folded = list(fold(rows, period, flatten=False))
-        
-        M = len(folded)
-        var = []
+        #folded = list(fold(rows, period, flatten=False))
+        bin, fluxes = zip(*fold(rows, period, 30, flatten=False))
+        M = len(bin)
+        variance = []
         n = []
-        for row in folded:
-            var.append(array(row[1]).var())
-            n.append(len(row[1]))
-
-        s.append(s_variance(var, n, M))
+        for flux in fluxes:
+            variance.append(array(flux).var())
+            n.append(len(flux))
+        s.append(s_variance(variance, n, M))
 
     for i in range(len(s)):
         s[i] = s[i] / sigma
 
-    pylab.plot(test_periods, s)
-    pylab.xlabel("period, days")
-    pylab.ylabel("dispersion")
-    pylab.title("VelaX-1 18-60 KeV Phase Dispersion")
-    pylab.show()
+    # pylab.plot(test_periods, s)
+    # pylab.xlabel("period, days")
+    # pylab.ylabel("dispersion")
+    # pylab.title("VelaX-1 18-60 KeV Phase Dispersion")
+    # pylab.show()
+
+    print s
 
 
 def bin_fluxes(rows):
@@ -222,8 +222,8 @@ def bin_fluxes(rows):
     return fluxes
 
 
-def s_variance(var, n, M):
-    A = map(lambda var, n: (n - 1) * var, var, n)
+def s_variance(variance, n, M):
+    A = map(lambda var, n: (n - 1) * var, variance, n)
     return math.fsum(A) / (math.fsum(n) - M)
 
 
@@ -299,7 +299,8 @@ if __name__ == "__main__":
     #histogram(multi_lomb(data, iterations=10))
 
     #plot_rebin(data)
-    #period_max = periodogram(data)
+    #period_max = periodogram(data, plot=True)
+    plot_fold(data, period_max)
+    pdm(data, 10.0, 10.3, 0.1)
     #plot_fold(data, period_max)
-    pdm(data, 19.50, 0.05, 20.0)
     #hratio_plot(list(rebin(data_high)), list(rebin(data_low)))
