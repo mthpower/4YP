@@ -161,7 +161,7 @@ def fold(rows, period, number_bins=20, flatten=True):
         biggest = bins[i + 1]
         value = itertools.chain.from_iterable(row_tree[v:biggest].values())
         if value:
-            if flatten == False:
+            if not flatten:
                 yield (v, bin_fluxes(value))
             else:
                 flux, error = rebin_error(value)
