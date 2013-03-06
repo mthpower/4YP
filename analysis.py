@@ -191,7 +191,7 @@ def pdm(rows, min_period, max_period, sample):
 
     test_periods = arange(min_period, max_period, sample)
 
-    s = []
+    bin_sigmas = []
     for period in test_periods:
         #folded = list(fold(rows, period, flatten=False))
         bin, fluxes = zip(*fold(rows, period, 30, flatten=False))
@@ -201,10 +201,9 @@ def pdm(rows, min_period, max_period, sample):
         for flux in fluxes:
             variance.append(array(flux).var())
             n.append(len(flux))
-        s.append(s_variance(variance, n, M))
+        bin_sigmas.append(s_variance(variance, n, M))
 
-    for i in range(len(s)):
-        s[i] = s[i] / sigma
+    bin_sigmas = list(map(lambda x: x / sigma, bin_sigmas))
 
     # pylab.plot(test_periods, s)
     # pylab.xlabel("period, days")
@@ -212,11 +211,11 @@ def pdm(rows, min_period, max_period, sample):
     # pylab.title("VelaX-1 18-60 KeV Phase Dispersion")
     # pylab.show()
 
-    print s
+    return bin_sigmas
 
 
 def bin_fluxes(rows):
-    fluxes=[]
+    fluxes = []
     for row in rows:
         fluxes.append(row["flux"])
     return fluxes
@@ -300,7 +299,7 @@ if __name__ == "__main__":
 
     #plot_rebin(data)
     #period_max = periodogram(data, plot=True)
-    plot_fold(data, period_max)
-    pdm(data, 10.0, 10.3, 0.1)
+    #plot_fold(data, period_max)
+    print pdm(data, 10.0, 10.3, 0.1)
     #plot_fold(data, period_max)
     #hratio_plot(list(rebin(data_high)), list(rebin(data_low)))
