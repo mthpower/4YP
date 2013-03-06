@@ -2,7 +2,7 @@
 from __future__ import division
 import itertools
 import pylab
-from numpy import *
+from numpy import * #<-- noooooooooooooooooooo
 import lomb
 import math
 from operator import itemgetter, mul, add, sub
