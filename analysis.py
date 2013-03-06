@@ -183,33 +183,36 @@ def plot_fold(data, period_max):
     return list(x), list(y), list(errors)
 
 
-def pdm(rows, min_period, max_period, sample):
-    lc_fluxes = []
-    for row in rows:
-        lc_fluxes.append(row["flux"])
-    sigma = array(lc_fluxes).var()
+def _inner_pdm(rows, period):
+    #folded = list(fold(rows, period, flatten=False))
+    bin, fluxes = zip(*fold(rows, period, 30, flatten=False))
+    M = len(bin)
+    variance = []
+    n = []
+    for flux in fluxes:
+        variance.append(array(flux).var())
+        n.append(len(flux))
+    return s_variance(variance, n, M)
 
-    test_periods = arange(min_period, max_period, sample)
-
-    bin_sigmas = []
-    for period in test_periods:
-        #folded = list(fold(rows, period, flatten=False))
-        bin, fluxes = zip(*fold(rows, period, 30, flatten=False))
-        M = len(bin)
-        variance = []
-        n = []
-        for flux in fluxes:
-            variance.append(array(flux).var())
-            n.append(len(flux))
-        bin_sigmas.append(s_variance(variance, n, M))
-
-    bin_sigmas = list(map(lambda x: x / sigma, bin_sigmas))
 
     # pylab.plot(test_periods, s)
     # pylab.xlabel("period, days")
     # pylab.ylabel("dispersion")
     # pylab.title("VelaX-1 18-60 KeV Phase Dispersion")
     # pylab.show()
+
+def calculate_sigma(rows):
+    lc_fluxes = []
+    for row in rows:
+        lc_fluxes.append(row["flux"])
+    return array(lc_fluxes).var()
+
+
+def pdm(rows, periods):
+    sigma = calculate_sigma(rows)
+    bin_sigmas = []
+    for period in periods:
+        bin_sigmas.append(_inner_pdm(rows, period) / sigma)
 
     return bin_sigmas
 
@@ -300,6 +303,31 @@ if __name__ == "__main__":
     #plot_rebin(data)
     #period_max = periodogram(data, plot=True)
     #plot_fold(data, period_max)
-    print pdm(data, 10.0, 10.3, 0.1)
+    #print pdm(data, arange(10.1, 10.4, 0.1))
+
+    print pdm(data, (10.3, 10.4, 10.5))
+    print pdm(data, (10.0, 10.1, 10.2, 10.3, 10.4, 10.5))
+
+
+def test_pdm():
+    data = filter_data(data_file="VelaX-1 18-60")
+    print _inner_pdm(data, 10.1)
+    print _inner_pdm(data, 10.1)
+
+    sigma = calculate_sigma(data)
+
+    bin_sigmas = []
+    for period in arange(10.0, 10.4, 0.1):
+        bin_sigmas.append(_inner_pdm(data, period) / sigma)
+
+    print bin_sigmas
+
+    sigma = calculate_sigma(data)
+    bin_sigmas = []
+    for period in arange(10.2, 10.4, 0.1):
+        bin_sigmas.append(_inner_pdm(data, period) / sigma)
+
+    print bin_sigmas
+
     #plot_fold(data, period_max)
     #hratio_plot(list(rebin(data_high)), list(rebin(data_low)))
