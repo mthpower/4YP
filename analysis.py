@@ -2,7 +2,7 @@
 from __future__ import division
 import itertools
 import pylab
-from numpy import * #<-- noooooooooooooooooooo
+import numpy as np
 import lomb
 import math
 from operator import itemgetter, mul, add, sub
@@ -70,7 +70,7 @@ def import_data(file_name):
     MJD, flux, flux_error, OOA, exposure.
     example MJD, flux, flux_error, OOA, exposure = import_data(file_name)
     """
-    return loadtxt(file_name, usecols=(1, 2, 3, 5, 6), dtype={
+    return np.loadtxt(file_name, usecols=(1, 2, 3, 5, 6), dtype={
         "names": ("MJD", "flux", "flux_error", "OAA", "exposure"),
         "formats": ("f", "f", "f", "f", "f")
     })
@@ -102,7 +102,7 @@ def rebin_error(rows, keys=("flux", "flux_error")):
 
 def plot_rebin(data):
     x, y, errors = zip(*rebin(data))
-    x_shift = empty(len(x))
+    x_shift = np.empty(len(x))
     for i in range(len(x)):
         x_shift[i] = x[i] - x[0]
     pylab.errorbar(x_shift, y, yerr=errors, fmt=".")
@@ -119,7 +119,7 @@ def lombscargle(rows, oversample=8., nyquist=10, keys=("MJD", "flux")):
         x.append(row[keys[0]])
         y.append(row[keys[1]])
 
-    fx, fy, nout, jmax, prob = lomb.fasper(array(x), array(y), oversample, nyquist)
+    fx, fy, nout, jmax, prob = lomb.fasper(np.array(x), np.array(y), oversample, nyquist)
 
     return (zip(fx, fy), jmax)
 
@@ -134,8 +134,8 @@ def periodogram(data, plot=False):
 
     print "period =", period_max, "days"
 
-    if plot == True:
-        pylab.vlines(period, 0, array(power), color='k', linestyles='solid')
+    if plot:
+        pylab.vlines(period, 0, np.array(power), color='k', linestyles='solid')
         pylab.xlabel("period, days")
         pylab.ylabel("power")
         pylab.xlim([0, 20])
@@ -155,7 +155,7 @@ def fold(rows, period, number_bins=20, flatten=True):
         row_tree[mod_mjd] = lst
     #rows.sort(key=itemgetter("MJD"))
 
-    bins = linspace(0, period, number_bins + 1)
+    bins = np.linspace(0, period, number_bins + 1)
     for i in range(len(bins) - 1):
         v = bins[i]
         biggest = bins[i + 1]
@@ -190,7 +190,7 @@ def _inner_pdm(rows, period):
     variance = []
     n = []
     for flux in fluxes:
-        variance.append(array(flux).var())
+        variance.append(np.array(flux).var())
         n.append(len(flux))
     return s_variance(variance, n, M)
 
@@ -205,7 +205,7 @@ def calculate_sigma(rows):
     lc_fluxes = []
     for row in rows:
         lc_fluxes.append(row["flux"])
-    return array(lc_fluxes).var()
+    return np.array(lc_fluxes).var()
 
 
 def pdm(rows, periods):
@@ -317,14 +317,14 @@ def test_pdm():
     sigma = calculate_sigma(data)
 
     bin_sigmas = []
-    for period in arange(10.0, 10.4, 0.1):
+    for period in np.arange(10.0, 10.4, 0.1):
         bin_sigmas.append(_inner_pdm(data, period) / sigma)
 
     print bin_sigmas
 
     sigma = calculate_sigma(data)
     bin_sigmas = []
-    for period in arange(10.2, 10.4, 0.1):
+    for period in np.arange(10.2, 10.4, 0.1):
         bin_sigmas.append(_inner_pdm(data, period) / sigma)
 
     print bin_sigmas
