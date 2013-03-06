@@ -149,10 +149,10 @@ def fold(rows, period, number_bins=20, flatten=True):
     row_tree = Tree()
     print "folding on:", period, "days"
     for row in rows:
-        row["MJD"] %= period
-        lst = row_tree.get(row["MJD"], [])
+        mod_mjd = row["MJD"] % period
+        lst = row_tree.get(mod_mjd, [])
         lst.append(row)
-        row_tree[row["MJD"]] = lst
+        row_tree[mod_mjd] = lst
     #rows.sort(key=itemgetter("MJD"))
 
     bins = linspace(0, period, number_bins + 1)
