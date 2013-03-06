@@ -5,37 +5,13 @@ import pylab
 import numpy as np
 import lomb
 import math
-from operator import itemgetter, mul, add, sub
+from operator import mul
 from bintrees import FastBinaryTree as Tree
 from six.moves import filter, zip
 import random
 from multiprocessing import Pool
 
-DATA_FILES = {
-    "IGR J18027-2016 17-30": "log_IGRJ18027-2016_17-30.dat",
-    "IGR J18027-2016 30-60": "log_IGRJ18027-2016_30-60.dat",
-    "GX13+1_30-60": "log_GX13+1_30-60.dat",
-    "1A0535+262 18-60": "log_1A0535+262_18-60.dat",
-    "AXJ1910.7+0917 18-60": "log_AXJ1910.7+0917_18-60.dat",
-    "AXJ1910.7+0917 100-300": "log_AXJ1910.7+0917_100-300.dat",
-    "CenX-3 18-60": "log_CenX-3_18-60.dat",
-    "EXO2030+375 18-60": "log_EXO2030+375_18-60.dat",
-    "IGRJ08408-4503 18-60": "log_IGRJ08408-4503_18-60.dat",
-    "SMCX-1 18-60": "log_SMCX-1_18-60.dat",
-    "OAO1657-415 18-60": "log_OAO1657-415_18-60.dat",
-    "IGR J11215-5952 18-60": "log_IGRJ11215-5952_18-60.dat",
-    "IGR J16418-4532 18-60": "log_IGRJ16418-4532_18-60.dat",
-    "IGR J16465-4507 18-60": "log_IGRJ16465-4507_18-60.dat",
-    "IGR J16479-4514 18-60": "log_IGRJ16479-4514_18-60.dat",
-    "IGR J17391-3021 18-60": "log_IGRJ17391-3021_18-60.dat",
-    "IGR J17407-2808 18-60": "log_IGRJ17407-2808_18-60.dat",
-    "IGR J17544-2619 18-60": "log_IGRJ17544-2619_18-60.dat",
-    "IGR J18219-1347 18-60": "log_IGRJ18219-1347_18-60.dat",
-    "IGR J18410-0535 18-60": "log_IGRJ18410-0535_18-60.dat",
-    "IGR J18450-0435 18-60": "log_IGRJ18450-0435_18-60.dat",
-    "IGR J18483-0311 18-60": "log_IGRJ18483-0311_18-60.dat",
-    "VelaX-1 18-60": "log_VelaX-1_18-60.dat"
-}
+from nose.tools import eq_
 
 
 def quadrature(dx):
@@ -76,10 +52,10 @@ def import_data(file_name):
     })
 
 
-def filter_data(data_file):
+def filter_data(file_name):
     return list(filter(
         lambda row: (row["OAA"] < 12) and (row["exposure"] > 500),
-        import_data(DATA_FILES[data_file])
+        import_data(file_name)
     ))
 
 
@@ -138,7 +114,7 @@ def periodogram(data, plot=False):
         pylab.vlines(period, 0, np.array(power), color='k', linestyles='solid')
         pylab.xlabel("period, days")
         pylab.ylabel("power")
-        pylab.xlim([0, 20])
+        pylab.xlim([0, 250])
         pylab.title("VelaX-1 18-60 KeV Periodogram")
         pylab.show()
 
@@ -147,7 +123,6 @@ def periodogram(data, plot=False):
 
 def fold(rows, period, number_bins=20, flatten=True):
     row_tree = Tree()
-    print "folding on:", period, "days"
     for row in rows:
         mod_mjd = row["MJD"] % period
         lst = row_tree.get(mod_mjd, [])
@@ -201,6 +176,7 @@ def _inner_pdm(rows, period):
     # pylab.title("VelaX-1 18-60 KeV Phase Dispersion")
     # pylab.show()
 
+
 def calculate_sigma(rows):
     lc_fluxes = []
     for row in rows:
@@ -210,11 +186,9 @@ def calculate_sigma(rows):
 
 def pdm(rows, periods):
     sigma = calculate_sigma(rows)
-    bin_sigmas = []
     for period in periods:
-        bin_sigmas.append(_inner_pdm(rows, period) / sigma)
+        yield (_inner_pdm(rows, period)) / sigma
 
-    return bin_sigmas
 
 
 def bin_fluxes(rows):
@@ -229,8 +203,9 @@ def s_variance(variance, n, M):
     return math.fsum(A) / (math.fsum(n) - M)
 
 
-def plot_pdm():
-    pass
+def plot_pdm(rows, periods):
+    pylab.plot(periods, list(pdm(rows, periods)))
+    pylab.show()
 
 
 def hratio(high, low):
@@ -293,7 +268,7 @@ def histogram(periods, bins=20):
 
 
 if __name__ == "__main__":
-    data = filter_data(data_file="VelaX-1 18-60")
+    data = filter_data(file_name="project_data/log_VelaX-1_18-60.dat")
     #data_low = filter_data(data_file="IGR J18027-2016 17-30")
     #data_high = filter_data(data_file="IGR J18027-2016 30-60")
     #data = ["a","b","c","d","e","f"]
@@ -304,13 +279,19 @@ if __name__ == "__main__":
     #period_max = periodogram(data, plot=True)
     #plot_fold(data, period_max)
     #print pdm(data, arange(10.1, 10.4, 0.1))
+    # data = []
+    # for i in np.arange(1, 100, 0.1):
+    #     data.append({
+    #         "MJD": i,
+    #         "flux": math.sin(i / 3),
+    #         "error": 1,
+    #     })
 
-    print pdm(data, (10.3, 10.4, 10.5))
-    print pdm(data, (10.0, 10.1, 10.2, 10.3, 10.4, 10.5))
+    plot_pdm(data, np.arange(8.5, 9.5, 0.01))
 
 
 def test_pdm():
-    data = filter_data(data_file="VelaX-1 18-60")
+    data = filter_data(file_name="log_VelaX-1_18-60.dat")
     print _inner_pdm(data, 10.1)
     print _inner_pdm(data, 10.1)
 
@@ -331,3 +312,17 @@ def test_pdm():
 
     #plot_fold(data, period_max)
     #hratio_plot(list(rebin(data_high)), list(rebin(data_low)))
+
+
+def test_pdm_sin():
+    data = []
+    for i in np.arange(1, 100, 0.1):
+        data.append({
+            "MJD": i,
+            "flux": math.sin(i / 3),
+            "error": 1,
+        })
+
+    eq_(list(pdm(data, np.arange(19, 19.3, 0.1))),
+        [0.0086289659844807666, 0.017522407256532074, 0.030554646990128276, 0.047455228134305749]
+        )
