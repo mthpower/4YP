@@ -41,11 +41,6 @@ def weighted_av_error(x, dx):
     return fractxy(math.fsum(q), quadrature(dq), weighted_av(x, dx))
 
 
-# class LightCurve(object):
-#     def __init__(self, file_name):
-#         self.rows = filter_data(file_name)
-
-
 def import_data(file_name):
     """
     Imports text file of format specified by T.Bird, outputs into arrays:
@@ -56,6 +51,18 @@ def import_data(file_name):
         "names": ("MJD", "flux", "flux_error", "OAA", "exposure"),
         "formats": ("f", "f", "f", "f", "f")
     })
+
+def import_data_asm(file_name):
+    """
+    Imports text file of format specified by T.Bird, outputs into arrays:
+    MJD, flux, flux_error, OOA, exposure.
+    example MJD, flux, flux_error, OOA, exposure = import_data(file_name)
+    """
+    return np.loadtxt(file_name, usecols=(0, 1, 2), dtype={
+        "names": ("MJD", "flux", "flux_error"),
+        "formats": ("f", "f", "f")
+    })
+
 
 
 def filter_data(file_name):
@@ -87,14 +94,15 @@ def plot_rebin(data):
     x_shift = np.empty(len(x))
     for i in range(len(x)):
         x_shift[i] = x[i] - x[0]
+    #pylab.errorbar(x_shift, y, yerr=errors)
     pylab.errorbar(x_shift, y, yerr=errors, fmt=".")
     pylab.xlabel("time, days")
     pylab.ylabel("counts/s")
-    pylab.title("VelaX-1 18-60 KeV 20 days binned Lightcurve")
+    pylab.title("CenX-3 18-60 KeV 20 days binned Lightcurve")
     pylab.show()
 
 
-def lombscargle(rows, oversample=8., nyquist=10, keys=("MJD", "flux")):
+def lombscargle(rows, oversample=6, nyquist=5, keys=("MJD", "flux")):
     x = []
     y = []
     for row in rows:
@@ -131,8 +139,8 @@ def periodogram(data, plot=False):
         pylab.vlines(period, 0, np.array(power), color='k', linestyles='solid')
         pylab.xlabel("period, days")
         pylab.ylabel("power")
-        pylab.xlim([2, 30])
-        pylab.title("IGRJ17544-2619 18-60 KeV Periodogram")
+        pylab.xlim([2, 200])
+        pylab.title("CenX-3 18-60 KeV Periodogram")
         pylab.show()
 
     return period_max
@@ -146,8 +154,7 @@ def periodogram_scipy(data, frequencies, plot=False):
         pylab.vlines(periods, 0, np.array(pgram), color='k', linestyles='solid')
         pylab.xlabel("period, days")
         pylab.ylabel("power")
-#        pylab.xlim([1, 100])
-        pylab.title("IGRJ17544-2619 18-60 KeV Periodogram")
+        pylab.title("CenX-3 18-60 KeV Periodogram")
         pylab.show()
 
 
@@ -158,7 +165,6 @@ def fold(rows, period, number_bins=20, flatten=True):
         lst = row_tree.get(mod_mjd, [])
         lst.append(row)
         row_tree[mod_mjd] = lst
-    #rows.sort(key=itemgetter("MJD"))
 
     bins = np.linspace(0, period, number_bins + 1)
     for i in range(len(bins) - 1):
@@ -179,11 +185,12 @@ def plot_fold(data, period_max):
     x = itertools.chain.from_iterable([x, map(lambda x: x + period_max, x)])
     y = itertools.chain.from_iterable([y, y])
     errors = itertools.chain.from_iterable([errors, errors])
+    x = map(lambda x: x / period_max, x)
     pylab.errorbar(list(x), list(y), yerr=list(errors))
     #pylab.errorbar(list(x), list(y), yerr=list(errors), fmt=".")
-    pylab.xlabel("time, days")
+    pylab.xlabel("phase, cycles")
     pylab.ylabel("counts/s")
-    pylab.title("VelaX-1 18-60 KeV Folded Lightcurve")
+    pylab.title("CenX-3 18-60 KeV Folded Lightcurve")
     pylab.show()
     return list(x), list(y), list(errors)
 
@@ -207,9 +214,11 @@ def calculate_sigma(rows):
     return np.array(lc_fluxes).var()
 
 
-def pdm(rows, periods):
+def pdm(rows, frequencies):
+    periods = map(lambda x: (2 * math.pi) / x, frequencies)
     sigma = calculate_sigma(rows)
     for period in periods:
+        print "folding on" , period 
         yield (_inner_pdm(rows, period)) / sigma
 
 
@@ -225,8 +234,9 @@ def s_variance(variance, n, M):
     return math.fsum(A) / (math.fsum(n) - M)
 
 
-def plot_pdm(rows, periods):
-    pylab.plot(periods, list(pdm(rows, periods)))
+def plot_pdm(rows, frequencies):
+    periods = map(lambda x: (2 * math.pi) / x, frequencies)
+    pylab.plot(periods, list(pdm(rows, frequencies)))
     pylab.xlabel("period, days")
     pylab.ylabel("dispersion")
     pylab.title("IGRJ18027-2016 18-60 KeV Phase Dispersion")
@@ -293,16 +303,19 @@ def histogram(periods, bins=20):
 
 
 if __name__ == "__main__":
-    data = filter_data(file_name="project_data/log_IGRJ18027-2016_18-60.dat")
+    data = filter_data(file_name="project_data/log_CenX-3_18-60.dat")
+    data_asm = import_data_asm(file_name="ASM/ASMCenX3.txt")
     #data_low = filter_data(data_file="IGR J18027-2016 17-30")l
     #data_high = filter_data(data_file="IGR J18027-2016 30-60")
     #data = ["a","b","c","d","e","f"]
 
     #histogram(multi_lomb(data, iterations=10))
-
+    #plot_rebin(data_asm)
     #plot_rebin(data)
-    #period_max = periodogram(data, plot=True)
+    #period_max = periodogram(data, plot=False)
+    period_max = periodogram(data_asm, plot=False)
     #plot_fold(data, period_max)
+    plot_fold(data_asm, period_max)
     #print pdm(data, arange(10.1, 10.4, 0.1))
     # data = []
     # for i in np.arange(1, 100, 0.1):
@@ -312,9 +325,9 @@ if __name__ == "__main__":
     #         "error": 1,
     #     })
 
-    periodogram_scipy(data, np.arange(0.15, 3, 0.001), plot=True)
+    #periodogram_scipy(data, np.arange(0.02, 5, 0.0001), plot=True)
 
-    #plot_pdm(data, np.arange(4.3, 4.8, 0.001))
+    #plot_pdm(data, np.arange(0.18, 4, 0.005))
 
 
 def test_pdm():
