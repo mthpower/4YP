@@ -171,8 +171,8 @@ def fold(rows, period, number_bins=20, flatten=True):
     for i in range(len(bins) - 1):
         v = bins[i]
         biggest = bins[i + 1]
-        value = itertools.chain.from_iterable(row_tree[v:biggest].values())
-        if value:
+        value = list(itertools.chain.from_iterable(row_tree[v:biggest].values()))
+        if len(value):
             if not flatten:
                 yield (v, bin_fluxes(value))
             else:
@@ -304,19 +304,19 @@ def histogram(periods, bins=20):
 
 
 if __name__ == "__main__":
-    data = filter_data(file_name="project_data/log_CenX-3_18-60.dat")
-    data_asm = import_data_asm(file_name="ASM/ASMCenX3.txt")
+    data = filter_data(file_name="project_data/log_IGRJ16465-4507_18-60.dat")
+    #data_asm = import_data_asm(file_name="ASM/ASMCenX3.txt")
     #data_low = filter_data(data_file="IGR J18027-2016 17-30")l
     #data_high = filter_data(data_file="IGR J18027-2016 30-60")
     #data = ["a","b","c","d","e","f"]
 
     #histogram(multi_lomb(data, iterations=10))
     #plot_rebin(data_asm)
-    #plot_rebin(data)
-    #period_max = periodogram(data, plot=False)
-    period_max = periodogram(data_asm, plot=False)
-    #plot_fold(data, period_max)
-    plot_fold(data_asm, period_max)
+    plot_rebin(data)
+    period_max = periodogram(data, plot=False)
+    #period_max = periodogram(data_asm, plot=False)
+    plot_fold(data, period_max)
+    #plot_fold(data_asm, period_max)
     #print pdm(data, arange(10.1, 10.4, 0.1))
     # data = []
     # for i in np.arange(1, 100, 0.1):
