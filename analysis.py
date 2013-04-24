@@ -28,17 +28,19 @@ def fractional(x, dx):
 
 def weighted_av(x, dx):
     weights = map(lambda x: 1 / (x ** 2), dx)
-    xw = map(lambda x, w: x * w, x, weights)
-    return math.fsum(xw) / math.fsum(weights)
+    xw = map(mul, x, weights)
+    inverted_dx = map(lambda x: 1 / x, dx)
+    dU = quadrature(inverted_dx)
+    return math.fsum(xw) / math.fsum(weights), dU / math.fsum(weights)
 
 
-def weighted_av_error(x, dx):
-    def fractxy(x, dx, y):
-        return y * (math.sqrt((dx / x) ** 2))
-    w = map(lambda x: 1 / (x ** 2), dx)
-    q = map(mul, x, w)
-    dq = map(fractxy, x, dx, q)
-    return fractxy(math.fsum(q), quadrature(dq), weighted_av(x, dx))
+# def weighted_av_error(x, dx):
+#     def fractxy(x, dx, y):
+#         return y * (math.sqrt((dx / x) ** 2))
+#     w = map(lambda x: 1 / (x ** 2), dx)
+#     q = map(mul, x, w)
+#     dq = map(fractxy, x, dx, q)
+#     return fractxy(math.fsum(q), quadrature(dq), weighted_av(x, dx))
 
 
 def import_data(file_name):
@@ -64,7 +66,6 @@ def import_data_asm(file_name):
     })
 
 
-
 def filter_data(file_name):
     return list(filter(
         lambda row: (row["OAA"] < 12) and (row["exposure"] > 500),
@@ -86,7 +87,7 @@ def rebin_error(rows, keys=("flux", "flux_error")):
     for row in rows:
         flux.append(row[keys[0]])
         error.append(row[keys[1]])
-    return weighted_av(flux, error), weighted_av_error(flux, error)
+    return weighted_av(flux, error)  # , weighted_av_error(flux, error)
 
 
 def plot_rebin(data):
