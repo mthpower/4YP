@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# Copyright 2014 Matthew Power
+
 from __future__ import division
 import itertools
 import pylab
